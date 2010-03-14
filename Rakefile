@@ -35,6 +35,7 @@ Hoe.spec PKG_NAME do
 
   extra_dev_deps << [ "archive-tar-minitar", "~>0.5.1" ]
   extra_dev_deps << [ "hanna", "~>0.1.2" ]
+  extra_dev_deps << [ "shoulda", "~>2" ]
   clean_globs << "coverage"
 
   spec_extras[:required_ruby_version] = ">= #{MINRUBY}"

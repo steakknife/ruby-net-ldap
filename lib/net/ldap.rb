@@ -1,6 +1,11 @@
 require 'openssl'
 require 'ostruct'
 
+module Net
+  class LDAP
+  end
+end
+
 require 'net/ber'
 require 'net/ldap/pdu'
 require 'net/ldap/filter'
@@ -232,7 +237,11 @@ module Net
   # to the server and then keeps it open while it executes a user-supplied block. Net::LDAP#open
   # closes the connection on completion of the block.
   class LDAP
-    class LdapError < StandardError; end
+    class LdapError < RuntimeError; end
+
+    def self.error(message)
+      raise LdapError.new(message)
+    end
 
     VERSION = "0.5.0"
 

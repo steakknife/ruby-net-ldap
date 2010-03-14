@@ -391,6 +391,8 @@ class Net::LDAP::Filter
     when :and
       ary = [@left.coalesce(:and), @right.coalesce(:and)].flatten
       ary.map { |a| a.to_ber }.to_ber_contextspecific(0)
+    when :ne
+      [self.class.ne(@left, @right).to_ber].to_ber_contextspecific(2)
     when :or
       ary = [@left.coalesce(:or), @right.coalesce(:or)].flatten
       ary.map { |a| a.to_ber }.to_ber_contextspecific(1)

@@ -87,7 +87,6 @@ class TestFilter < Test::Unit::TestCase
 			Net::LDAP::Filter.construct("(|(uid=*)(objectclass=*)(sn=*))"),
 
 			Net::LDAP::Filter.construct("objectclass=*aaa"),
-			Net::LDAP::Filter.construct("objectclass=*aaa"),
 			Net::LDAP::Filter.construct("objectclass=*aaa*bbb"),
 			Net::LDAP::Filter.construct("objectclass=*aaa bbb"),
 			Net::LDAP::Filter.construct("objectclass=*aaa  bbb"),

@@ -1,3 +1,3 @@
-# Add 'lib' to load path.
 require 'test/unit'
+require 'shoulda'
 require 'net/ldap'

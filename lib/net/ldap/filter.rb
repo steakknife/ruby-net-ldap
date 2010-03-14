@@ -30,6 +30,51 @@
 # Net::LDAP#search.
 #
 # See the individual class and instance methods below for more examples.
+#
+#--
+# Experimental support of LDAP Extensible Match Search Filter.
+#
+# =Usage Examples for OpenDS LDAP server:
+#   sample_attributes = ['cn:fr', 'cn:fr.eq',
+#     'cn:1.3.6.1.4.1.42.2.27.9.4.49.1.3', 'cn:dn:fr', 'cn:dn:fr.eq']
+#   attr = sample_attributes.first # Pick an extensible attribute
+#   value = 'roberts'
+#
+#   filter = "#{attr}:=#{value}" # Basic String Filter
+#   filter = Net::LDAP::Filter.ex(attr, value) # Net::LDAP::Filter
+#
+#   # Perform a search with the Extensible Match Filter
+#   Net::LDAP.search(:filter => filter)
+#
+# =LDIF sample (to reproduce the usage examples) :
+#
+#   version: 1
+#
+#   dn: dc=example,dc=com
+#   objectClass: domain
+#   objectClass: top
+#   dc: example
+#
+#   dn: ou=People,dc=example,dc=com
+#   objectClass: organizationalUnit
+#   objectClass: top
+#   ou: People
+#
+#   dn: uid=1,ou=People,dc=example,dc=com
+#   objectClass: person
+#   objectClass: organizationalPerson
+#   objectClass: inetOrgPerson
+#   objectClass: top
+#   cn:: csO0YsOpcnRz
+#   sn:: YsO0YiByw7Riw6lydHM=
+#   givenName:: YsO0Yg==
+#   uid: 1
+#
+# =Refs:
+# * http://www.ietf.org/rfc/rfc2251.txt
+# * http://www.novell.com/documentation/edir88/edir88/?page=/documentation/edir88/edir88/data/agazepd.html
+# * https://docs.opends.org/2.0/page/SearchingUsingInternationalCollationRules
+#++
 class Net::LDAP::Filter
   FilterTypes = [ :ne, :eq, :ge, :le, :and, :or, :not, :ex ]
 
@@ -252,18 +297,19 @@ class Net::LDAP::Filter
   #--
   # Filter ::=
   #     CHOICE {
-  #         and            [0] SET OF Filter,
-  #         or             [1] SET OF Filter,
-  #         not            [2] Filter,
-  #         equalityMatch  [3] AttributeValueAssertion,
-  #         substrings     [4] SubstringFilter,
-  #         greaterOrEqual [5] AttributeValueAssertion,
-  #         lessOrEqual    [6] AttributeValueAssertion,
-  #         present        [7] AttributeType,
-  #         approxMatch    [8] AttributeValueAssertion
+  #         and             [0] SET OF Filter,
+  #         or              [1] SET OF Filter,
+  #         not             [2] Filter,
+  #         equalityMatch   [3] AttributeValueAssertion,
+  #         substrings      [4] SubstringFilter,
+  #         greaterOrEqual  [5] AttributeValueAssertion,
+  #         lessOrEqual     [6] AttributeValueAssertion,
+  #         present         [7] AttributeType,
+  #         approxMatch     [8] AttributeValueAssertion,
+  #         extensibleMatch [9] MatchingRuleAssertion
   #     }
   #
-  # SubstringFilter
+  # SubstringFilter ::=
   #     SEQUENCE {
   #         type               AttributeType,
   #         SEQUENCE OF CHOICE {
@@ -272,6 +318,22 @@ class Net::LDAP::Filter
   #             final          [2] LDAPString
   #         }
   #     }
+  #
+  # MatchingRuleAssertion ::=
+  #     SEQUENCE {
+  #       matchingRule    [1] MatchingRuleId OPTIONAL,
+  #       type            [2] AttributeDescription OPTIONAL,
+  #       matchValue      [3] AssertionValue,
+  #       dnAttributes    [4] BOOLEAN DEFAULT FALSE
+  #     }
+  #     
+  # Matching Rule Suffixes
+  #     Less than   [.1] or .[lt]
+  #     Less than or equal to  [.2] or [.lte]
+  #     Equality  [.3] or  [.eq] (default)
+  #     Greater than or equal to  [.4] or [.gte]
+  #     Greater than  [.5] or [.gt]
+  #     Substring  [.6] or  [.sub]
   #
   #++
   def to_ber

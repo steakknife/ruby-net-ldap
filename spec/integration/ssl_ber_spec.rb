@@ -7,7 +7,6 @@ require 'net/ldap'
 
 describe "BER serialisation (SSL)" do
   # Transmits str to #to and reads it back from #from. 
-  #
   def transmit(str)
     to.write(str)
     to.close

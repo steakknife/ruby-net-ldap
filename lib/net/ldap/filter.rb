@@ -476,7 +476,7 @@ class Net::LDAP::Filter
       if @right == "*"
         l = entry[@left] and l.length > 0
       else
-        l = entry[@left] and l = l.to_a and l.index(@right)
+        l = entry[@left] and l = [l].flatten and l.index(@right)
       end
     else
       Net::LDAP.error("unknown filter type in match: #{@op}")

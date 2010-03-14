@@ -31,14 +31,14 @@
 #
 # See the individual class and instance methods below for more examples.
 class Net::LDAP::Filter
+  FilterTypes = [ :ne, :eq, :ge, :le, :and, :or, :not, :ex ]
+
   def initialize(op, left, right)
-    case op
-    when :ne, :eq, :ge, :le, :and, :or, :not
-      @op = op
-    else
+    unless FilterTypes.include?(op)
       Net::LDAP.error("Invalid or unsupported operator #{op.inspect} in LDAP Filter.")
     end
 
+    @op = op
     @left = left
     @right = right
   end
@@ -68,6 +68,11 @@ class Net::LDAP::Filter
     #   f = Net::LDAP::Filter.eq("mail", "*anderson*")
     def eq(attribute, value)
       new(:eq, attribute, value)
+    end
+
+    # Creates a Filter object indicating extensible comparison.
+    def ex(attribute, value)
+      new(:ex, attribute, value)
     end
 
     # Creates a Filter object indicating that a particular attribute value
@@ -218,6 +223,8 @@ class Net::LDAP::Filter
       "!(#{@left}=#{@right})"
     when :eq
       "#{@left}=#{@right}"
+    when :ex
+      "#{@left}:=#{@right}"
     when :ge
       "#{@left}>=#{@right}"
     when :le
@@ -301,6 +308,20 @@ class Net::LDAP::Filter
       else # equality
         [@left.to_s.to_ber, unescape(@right).to_ber].to_ber_contextspecific(3)
       end
+    when :ex
+      seq = []
+
+      unless @left =~ /^([-;\d\w]*)(:dn)?(:(\w+|[.\d\w]+))?$/
+        Net::LDAP.error("Bad attribute #{@left}")
+      end
+      type, dn, rule = $1, $2, $4
+
+      seq << rule.to_ber_contextspecific(1) unless rule.to_s.empty? # matchingRule
+      seq << type.to_ber_contextspecific(2) unless type.to_s.empty? # type
+      seq << unescape(@right).to_ber_contextspecific(3) # matchingValue
+      seq << "1".to_ber_contextspecific(4) unless dn.to_s.empty? # dnAttributes
+
+      seq.to_ber_contextspecific(9)
     when :ge
       [@left.to_s.to_ber, unescape(@right).to_ber].to_ber_contextspecific(5)
     when :le
@@ -473,9 +494,9 @@ class Net::LDAP::Filter
     # Added blanks to the attribute filter (26Oct06)
     def parse_filter_branch(scanner)
       scanner.scan(/\s*/)
-      if token = scanner.scan(/[\w\-_]+/)
+      if token = scanner.scan(/[-\w\d_:.]*[\d\w]/)
         scanner.scan(/\s*/)
-        if op = scanner.scan(/\=|\<\=|\<|\>\=|\>|\!\=/)
+        if op = scanner.scan(/<=|<|>=|>|!=|:=|=/)
           scanner.scan(/\s*/)
           if value = scanner.scan(/(?:[\w*.+-@=,#\$%&!\s]|\\[a-fA-F\d]{2,2})+/)
             # 20100313 AZ: Assumes that "(uid=george*)" is the same as
@@ -491,6 +512,8 @@ class Net::LDAP::Filter
               Net::LDAP::Filter.le(token, value)
             when ">="
               Net::LDAP::Filter.ge(token, value)
+            when ":="
+              Net::LDAP::Filter.ex(token, value)
             end
           end
         end

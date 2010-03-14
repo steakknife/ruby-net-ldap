@@ -27,6 +27,8 @@ class TestFilter < Test::Unit::TestCase
 	def test_c2
     assert_equal("(uid=george *)",
                  Filter.from_rfc2254("uid=george *").to_rfc2254)
+    assert_equal("(uid:=george *)",
+                 Filter.from_rfc2254("uid:=george *").to_rfc2254)
     assert_equal("(uid=george*)",
                  Filter.from_rfc2254(" ( uid =  george*   ) ").to_rfc2254)
 		assert_equal("(!(uid=george*))",

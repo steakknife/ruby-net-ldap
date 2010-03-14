@@ -1461,7 +1461,7 @@ class Net::LDAP::Connection #:nodoc:
     @conn.write pkt
 
     (be = @conn.read_ber(AsnSyntax)) && (pdu = LdapPdu.new(be)) && (pdu.app_tag == 7) or raise LdapError.new("response missing or invalid")
-    pdu.result
+    pdu.result_code
   end
 
   #--
@@ -1484,7 +1484,7 @@ class Net::LDAP::Connection #:nodoc:
     @conn.write pkt
 
     (be = @conn.read_ber(AsnSyntax)) && (pdu = LdapPdu.new(be)) && (pdu.app_tag == 9) or raise LdapError.new("response missing or invalid")
-    pdu.result
+    pdu.result_code
   end
 
   #--

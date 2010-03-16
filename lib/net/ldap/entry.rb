@@ -1,5 +1,6 @@
 # LDAP Entry (search-result) support classes
 #--
+#
 # Copyright (C) 2006 by Francis Cianfrocca. All Rights Reserved.
 #
 # Gmail: garbagecat10

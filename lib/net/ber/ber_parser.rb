@@ -1,6 +1,8 @@
 require 'stringio'
 
 module Net::BER::BERParser
+  VERSION = '0.1.0'
+
   # The order of these follows the class-codes in BER.
   # Maybe this should have been a hash.
   TagClasses = [:universal, :application, :context_specific, :private]

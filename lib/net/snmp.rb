@@ -23,6 +23,8 @@
 #---------------------------------------------------------------------------
 module Net
   class SNMP
+    VERSION = '0.1.0'
+
     application_primitive = {
       1 => :integer, # Counter32, (RFC2578 sec 2)
       2 => :integer, # Gauge32 or Unsigned32, (RFC2578 sec 2)

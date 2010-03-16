@@ -36,6 +36,8 @@ module Net
       :constructed => 32
     }
 
+    VERSION = '0.1.0'
+    
     #--
     # This condenses our nicely self-documenting ASN hashes down
     # to an array for fast lookups.

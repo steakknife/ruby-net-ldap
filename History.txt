@@ -1,11 +1,16 @@
-=== Net::LDAP 0.1.0 / 2010-03-08
+=== Net::LDAP 0.2.0 / 2010-03-08
 * Ruby 1.9 support. Should now run with Ruby versions compatible with 1.8.7 or
   better.
-* New maintainers, new project repository location. Please see the
-  README.markdown.
 * __ bugs fixed:
   * An LDAP::Entry should return an empty array when accessing a nonexistent
     attribute via a method call. Mirrors index lookup behaviour.
+
+=== Net::LDAP 0.1.0 / 2010-03-15
+* Small fixes throughout, more to come.
+* Ruby 1.9 support added.
+* Ruby 1.8.6 and below support removed. If we can figure out a compatible way
+  to reintroduce this, we will.
+* New maintainers, new project repository location. Please see the README.txt.
 
 === Net::LDAP 0.0.5
 * 13 minor enhancements:

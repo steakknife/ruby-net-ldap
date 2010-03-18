@@ -10,6 +10,7 @@ module Net
     end
   end
 end
+require 'socket'
 
 require 'net/ber'
 require 'net/ldap/pdu'

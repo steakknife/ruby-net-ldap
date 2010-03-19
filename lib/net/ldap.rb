@@ -244,7 +244,7 @@ class Net::LDAP
   class LdapError < RuntimeError; end
 
   def self.error(message)
-    raise LdapError.new(message)
+    raise LdapError, message
   end
 
   VERSION = "0.2.0"
@@ -556,7 +556,7 @@ class Net::LDAP
   # if the bind was unsuccessful.
   #++
   def open
-    raise LdapError.new("open already in progress") if @open_connection
+    Net::LDAP.error("open already in progress") if @open_connection
     begin
       @open_connection = Connection.new(:host => @host, :port => @port, :encryption => @encryption)
       @open_connection.bind @auth
@@ -1083,15 +1083,17 @@ class Net::LDAP::Connection #:nodoc:
   LdapVersion = 3
   MaxSaslChallenges = 10
 
-  def initialize server
+  def initialize(server)
     begin
       @conn = TCPSocket.new(server[:host], server[:port])
-    rescue
-      raise LdapError.new("no connection to server")
+    rescue SocketError
+      Net::LDAP.error("No such address or other socket error.")
+    rescue Errno::ECONNREFUSED
+      Net::LDAP.error("Server #{server[:host]} refused connection on port #{server[:port]}.")
     end
 
     if server[:encryption]
-      setup_encryption(server[:encryption])
+      setup_encryption server[:encryption]
     end
 
     yield self if block_given?
@@ -1107,9 +1109,12 @@ class Net::LDAP::Connection #:nodoc:
     LDAP.error("OpenSSL is unavailable") unless Net::LDAP::HasOpenSSL
     ctx = OpenSSL::SSL::SSLContext.new
     conn = OpenSSL::SSL::SSLSocket.new(io, ctx)
+
     conn.connect
     conn.sync_close = true
+
     conn.extend(GetbyteForSSLSocket) unless conn.respond_to?(:getbyte)
+
     conn
   end
 
@@ -1150,16 +1155,16 @@ class Net::LDAP::Connection #:nodoc:
       request_pkt = [msgid, request].to_ber_sequence
       @conn.write request_pkt
       be = @conn.read_ber(AsnSyntax)
-      raise LdapError.new("no start_tls result") if be.nil?
+      Net::LDAP.error("no start_tls result") if be.nil?
       pdu = Net::LdapPdu.new(be)
-      raise LdapError.new("no start_tls result") if pdu.nil?
+      Net::LDAP.error("no start_tls result") if pdu.nil?
       if pdu.result_code.zero?
         @conn = self.class.wrap_with_ssl(@conn)
       else
-        raise LdapError.new("start_tls failed: #{pdu.result_code}")
+        Net::LDAP.error("start_tls failed: #{pdu.result_code}")
       end
     else
-      raise LdapError.new("unsupported encryption method #{args[:method]}")
+      Net::LDAP.error("unsupported encryption method #{args[:method]}")
     end
   end
 
@@ -1195,7 +1200,7 @@ class Net::LDAP::Connection #:nodoc:
     elsif meth == :gss_spnego
       bind_gss_spnego(auth)
     else
-      raise LdapError.new("unsupported auth method (#{meth})")
+      Net::LDAP.error("unsupported auth method (#{meth})")
     end
   end
 
@@ -1211,14 +1216,14 @@ class Net::LDAP::Connection #:nodoc:
                  ["", ""]
                end
 
-    raise LdapError.new("invalid binding information") unless (user && psw)
+    Net::LDAP.error("invalid binding information") unless (user && psw)
 
     msgid = next_msgid.to_ber
     request = [LdapVersion.to_ber, user.to_s.to_ber, psw.to_ber_contextspecific(0)].to_ber_appsequence(0)
     request_pkt = [msgid, request].to_ber_sequence
     @conn.write request_pkt
 
-    (be = @conn.read_ber(AsnSyntax) and pdu = Net::LdapPdu.new(be)) or raise LdapError.new("no bind result")
+    (be = @conn.read_ber(AsnSyntax) and pdu = Net::LdapPdu.new(be)) or Net::LDAP.error("no bind result")
     pdu.result_code
   end
 
@@ -1238,7 +1243,7 @@ class Net::LDAP::Connection #:nodoc:
   #++
   def bind_sasl auth
     mech, cred, chall = auth[:mechanism], auth[:initial_credential], auth[:challenge_response]
-    raise LdapError.new("invalid binding information") unless (mech && cred && chall)
+    Net::LDAP.error("invalid binding information") unless (mech && cred && chall)
 
     n = 0
     loop {
@@ -1248,14 +1253,14 @@ class Net::LDAP::Connection #:nodoc:
       request_pkt = [msgid, request].to_ber_sequence
       @conn.write request_pkt
 
-      (be = @conn.read_ber(AsnSyntax) and pdu = Net::LdapPdu.new(be)) or raise LdapError.new("no bind result")
+      (be = @conn.read_ber(AsnSyntax) and pdu = Net::LdapPdu.new(be)) or Net::LDAP.error("no bind result")
       return pdu.result_code unless pdu.result_code == 14 # saslBindInProgress
-      raise LdapError.new("sasl-challenge overflow") if ((n += 1) > MaxSaslChallenges)
+      Net::LDAP.error("sasl-challenge overflow") if ((n += 1) > MaxSaslChallenges)
 
       cred = chall.call(pdu.result_server_sasl_creds)
     }
 
-    raise LdapError.new("why are we here?")
+    Net::LDAP.error("why are we here?")
   end
   private :bind_sasl
 
@@ -1273,7 +1278,7 @@ class Net::LDAP::Connection #:nodoc:
     require 'ntlm.rb'
 
     user, psw = [auth[:username] || auth[:dn], auth[:password]]
-    raise LdapError.new("invalid binding information") unless (user && psw)
+    Net::LDAP.error("invalid binding information") unless (user && psw)
 
     nego = proc { |challenge|
       t2_msg = NTLM::Message.parse(challenge)
@@ -1316,12 +1321,12 @@ class Net::LDAP::Connection #:nodoc:
     search_attributes = ((args && args[:attributes]) || []).map { |attr| attr.to_s.to_ber }
     return_referrals = args && args[:return_referrals] == true
     sizelimit = (args && args[:size].to_i) || 0
-    raise LdapError.new("invalid search-size") unless sizelimit >= 0
+    Net::LDAP.error("invalid search-size") unless sizelimit >= 0
     paged_searches_supported = (args && args[:paged_searches_supported])
 
     attributes_only = (args and args[:attributes_only] == true)
     scope = args[:scope] || Net::LDAP::SearchScope_WholeSubtree
-    raise LdapError.new("invalid search scope") unless SearchScopes.include?(scope)
+    Net::LDAP.error("invalid search scope") unless SearchScopes.include?(scope)
 
     # An interesting value for the size limit would be close to A/D's built-in
     # page limit of 1000 records, but openLDAP newer than version 2.2.0 chokes
@@ -1400,7 +1405,7 @@ class Net::LDAP::Connection #:nodoc:
           controls = pdu.result_controls
           break
         else
-          raise LdapError.new("invalid response-type in search: #{pdu.app_tag}")
+          Net::LDAP.error("invalid response-type in search: #{pdu.app_tag}")
         end
       end
 
@@ -1447,7 +1452,7 @@ class Net::LDAP::Connection #:nodoc:
   # TODO!!! If the user specifies a bogus opcode, we'll throw a
   # confusing error here ("to_ber_enumerated is not defined on nil").
   #++
-  def modify args
+  def modify(args)
     modify_dn = args[:dn] or raise "Unable to modify empty DN"
     modify_ops = []
     a = args[:operations] and a.each { |op, attr, values|
@@ -1461,7 +1466,7 @@ class Net::LDAP::Connection #:nodoc:
     pkt = [next_msgid.to_ber, request].to_ber_sequence
     @conn.write pkt
 
-    (be = @conn.read_ber(AsnSyntax)) && (pdu = LdapPdu.new(be)) && (pdu.app_tag == 7) or raise LdapError.new("response missing or invalid")
+    (be = @conn.read_ber(AsnSyntax)) && (pdu = LdapPdu.new(be)) && (pdu.app_tag == 7) or Net::LDAP.error("response missing or invalid")
     pdu.result_code
   end
 
@@ -1474,7 +1479,7 @@ class Net::LDAP::Connection #:nodoc:
   # and the matched-DN returned by the server.
   #++
   def add args
-    add_dn = args[:dn] or raise LdapError.new("Unable to add empty DN")
+    add_dn = args[:dn] or Net::LDAP.error("Unable to add empty DN")
     add_attrs = []
     a = args[:attributes] and a.each { |k, v|
       add_attrs << [ k.to_s.to_ber, [v].flatten.map { |m| m.to_ber }.to_ber_set ].to_ber_sequence
@@ -1484,7 +1489,7 @@ class Net::LDAP::Connection #:nodoc:
     pkt = [next_msgid.to_ber, request].to_ber_sequence
     @conn.write pkt
 
-    (be = @conn.read_ber(AsnSyntax)) && (pdu = LdapPdu.new(be)) && (pdu.app_tag == 9) or raise LdapError.new("response missing or invalid")
+    (be = @conn.read_ber(AsnSyntax)) && (pdu = LdapPdu.new(be)) && (pdu.app_tag == 9) or Net::LDAP.error("response missing or invalid")
     pdu.result_code
   end
 
@@ -1501,7 +1506,7 @@ class Net::LDAP::Connection #:nodoc:
     pkt = [next_msgid.to_ber, request].to_ber_sequence
     @conn.write pkt
 
-    (be = @conn.read_ber(AsnSyntax)) && (pdu = LdapPdu.new(be)) && (pdu.app_tag == 13) or raise LdapError.new("response missing or invalid")
+    (be = @conn.read_ber(AsnSyntax)) && (pdu = LdapPdu.new(be)) && (pdu.app_tag == 13) or Net::LDAP.error("response missing or invalid")
     pdu.result_code
   end
 
@@ -1516,7 +1521,7 @@ class Net::LDAP::Connection #:nodoc:
     pkt = [next_msgid.to_ber, request].to_ber_sequence
     @conn.write pkt
 
-    (be = @conn.read_ber(AsnSyntax)) && (pdu = LdapPdu.new(be)) && (pdu.app_tag == 11) or raise LdapError.new("response missing or invalid")
+    (be = @conn.read_ber(AsnSyntax)) && (pdu = LdapPdu.new(be)) && (pdu.app_tag == 11) or Net::LDAP.error("response missing or invalid")
     pdu.result_code
   end
 end # class Connection

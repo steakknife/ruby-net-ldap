@@ -65,16 +65,14 @@
 class Net::LDAP::Entry
   # This constructor is not generally called by user code.
   def initialize(dn = nil) #:nodoc:
-    @myhash = {
-      :dn => [dn]
-    }
+    @myhash = { :dn => [dn] }
   end
 
   def _dump(depth) #:nodoc:
     to_ldif
   end
 
-  def self._load(entry) #:noco:
+  def self._load(entry) #:nodoc:
     from_single_ldif_string entry
   end
 
@@ -83,11 +81,10 @@ class Net::LDAP::Entry
   # incoming value to an array if it isn't already one.
   #++
   def []=(name, value) #:nodoc:
-    sym = name.to_s.downcase.intern
+    sym = attribute_name(name)
     value = [value] unless value.is_a?(Array)
     @myhash[sym] = value
   end
-
 
   #--
   # We have to deal with this one as we do with []=
@@ -95,7 +92,7 @@ class Net::LDAP::Entry
   # in formulations like entry["CN"] << cn.
   #++
   def [](name) #:nodoc:
-    name = name.to_s.downcase.intern unless name.is_a?(Symbol)
+    name = attribute_name(name) unless name.is_a?(Symbol)
     @myhash[name] || []
   end
 
@@ -135,9 +132,9 @@ class Net::LDAP::Entry
       unless k == :dn
         v.each { |v1|
           v2 = if (k == :userpassword) || is_attribute_value_binary?(v1)
-              ": #{Base64.encode64(v1).chomp.gsub(/\n/m,"\n ")}"
+                ": #{Base64.encode64(v1).chomp.gsub(/\n/m,"\n ")}"
                else
-              " #{v1}"
+                " #{v1}"
                end
           ary << "#{k}:#{v2}\n"
         }
@@ -149,15 +146,15 @@ class Net::LDAP::Entry
 
   #--
   # TODO, doesn't support broken lines.
-  # It generates a SINGLE Entry object from an incoming LDIF stream
-  # which is of course useless for big LDIF streams that encode
-  # many objects.
+  # It generates a SINGLE Entry object from an incoming LDIF stream which is
+  # of course useless for big LDIF streams that encode many objects.
+  #
   # DO NOT DOCUMENT THIS METHOD UNTIL THESE RESTRICTIONS ARE LIFTED.
-  # As it is, it's useful for unmarshalling objects that we create,
-  # but not for reading arbitrary LDIF files.
-  # Eventually, we should have a class method that parses large LDIF
-  # streams into individual LDIF blocks (delimited by blank lines)
-  # and passes them here.
+  #
+  # As it is, it's useful for unmarshalling objects that we create, but not
+  # for reading arbitrary LDIF files. Eventually, we should have a class
+  # method that parses large LDIF streams into individual LDIF blocks
+  # (delimited by blank lines) and passes them here.
   #
   # There is one oddity, noticed by Matthias Tarasiewicz: as originally
   # written, this code would return an Entry object in which the DN
@@ -169,7 +166,7 @@ class Net::LDAP::Entry
   # (30Sep06, FCianfrocca)
   #++
   def self.from_single_ldif_string(ldif)
-    entry = Entry.new
+    entry = Net::LDAP::Entry.new
     entry[:dn] = []
     ldif.split(/\r?\n/m).each { |line|
       break if line.length == 0
@@ -183,7 +180,20 @@ class Net::LDAP::Entry
     }
     entry.dn ? entry : nil
   end
+    
+  #--
+  # Part of the support for getter and setter style access to attributes. 
+  #++
+  def respond_to?(sym)
+    name = attribute_name(sym)
+    return true if valid_attribute?(name)
+    return super
+  end
 
+  #--
+  # Supports getter and setter style access for all the attributes that this
+  # entry holds.
+  #++
   #--
   # Convenience method to convert unknown method names
   # to attribute references. Of course the method name
@@ -195,17 +205,39 @@ class Net::LDAP::Entry
   # Maybe we should thow something if the caller sends
   # arguments or a block...
   #++
-  def method_missing(*args, &block) #:nodoc:
-    s = args[0].to_s.downcase.intern
-    if s.to_s[-1] == 61 and s.to_s.length > 1
-      value = args[1] or raise RuntimeError.new( "unable to set value" )
-      value = [value] unless value.is_a?(Array)
-      name = s.to_s[0..-2].intern
-      self[name] = value
+  def method_missing(sym, *args, &block) #:nodoc:
+    name = attribute_name(sym)
+
+    if setter?(sym) && args.size == 1
+      if valid_attribute? name
+        set_attribute_value(name, *args)
+      else
+        begin
+          super
+        rescue NoMethodError
+          set_attribute_value(name, *args)
+        end
+      end
+    elsif args.empty?
+      if valid_attribute? name
+        self[name]
+      else
+        begin
+          super
+        rescue NoMethodError
+          []
+        end
+      end
     else
-      self[s]
+      super
     end
   end
+
+  def set_attribute_value(name, *args) #:nodoc:
+    self[name] = [ args.first ].flatten(1)
+    self[name]
+  end
+  private :set_attribute_value
 
   def write #:nodoc:
   end
@@ -227,4 +259,27 @@ class Net::LDAP::Entry
     false
   end
   private :is_attribute_value_binary?
-end # class Entry
+  
+  # Returns the symbol that can be used to access the attribute that
+  # sym_or_str designates.
+  #
+  def attribute_name(sym_or_str)
+    str = sym_or_str.to_s.downcase
+
+    # Does str match 'something='? Still only returns :something
+    return str[0...-1].to_sym if (str.size > 1) && (str[-1] == ?=)
+    return str.to_sym
+  end
+  private :attribute_name
+
+  # Given a valid attribute symbol, returns true. 
+  def valid_attribute?(attr_name)
+    attribute_names.include?(attr_name)
+  end
+  private :valid_attribute?
+
+  def setter?(sym)
+    sym.to_s[-1] == ?=
+  end
+  private :setter?
+end # class Net::LDAP::Entry

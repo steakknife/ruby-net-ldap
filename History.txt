@@ -1,7 +1,18 @@
-=== Net::LDAP 0.2.0 / 2010-__-__
-* __ bugs fixed:
-  * An LDAP::Entry should return an empty array when accessing a nonexistent
-    attribute via a method call. Mirrors index lookup behaviour.
+=== Net::LDAP NEXT / 2010-__-__
+* An LDAP::Entry should return an empty array when accessing a nonexistent
+  attribute via a method call. Mirrors index lookup behaviour.
+* Fixing a connection open bug.
+* Removed all calls to #to_a and replaced with [x].flatten.
+* Modified #add and #modify to return a Pdu#result_code instead of a
+  Pdu#result.
+* Significant changes to Net::LDAP::Filter to improve the handling of filter
+  string (RFCs 2254 and 4515).
+* Fixed Net::LDAP::Filter#to_ber to output the BER representation of
+  Net::LDAP::Filter.ne filters correctly.
+* Added RFC4515 extensible matching (e.g., "(cn:caseExactMatch:=Fred
+  Flintstone)"); provided by "nowhereman".
+* Moved the core extensions to submodules of Net::BER instead of Net::LDAP.
+* Fixing non-String user serialization. From abozanich, November 19, 2009.
 
 === Net::LDAP 0.1.1 / 2010-03-18
 * Fixing a critical problem with sockets.
@@ -103,3 +114,4 @@
 * Grateful acknowledgement to Austin Ziegler, who reviewed
   this code and provided the release framework, including
   minitar.
+(in /Users/austin/development/github/ruby/ruby-net-ldap)

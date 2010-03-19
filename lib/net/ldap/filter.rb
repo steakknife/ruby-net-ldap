@@ -201,6 +201,7 @@ class Net::LDAP::Filter
       FilterParser.parse(ldap_filter_string)
     end
     alias_method :from_rfc2254, :construct
+    alias_method :from_rfc4515, :construct
 
     # Convert an RFC-1777 LDAP/BER "Filter" object to a Net::LDAP::Filter
     # object.
@@ -397,7 +398,7 @@ class Net::LDAP::Filter
       ary = [@left.coalesce(:or), @right.coalesce(:or)].flatten
       ary.map { |a| a.to_ber }.to_ber_contextspecific(1)
     when :not
-        [@left.to_ber].to_ber_contextspecific(2)
+      [@left.to_ber].to_ber_contextspecific(2)
     end
   end
 

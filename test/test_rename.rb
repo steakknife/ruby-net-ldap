@@ -1,8 +1,8 @@
 require 'common'
 
 class TestRename < Test::Unit::TestCase
- 	HOST= '10.10.10.71'
-	PORT = 389
+ 	HOST= '127.0.0.1'
+	PORT = 3890
 	BASE = "o=test"
 	AUTH = { :method => :simple, :username => "cn=testadmin,#{BASE}", :password => 'password' }
 	BASIC_USER = "cn=jsmith,ou=sales,#{BASE}"
@@ -12,7 +12,7 @@ class TestRename < Test::Unit::TestCase
 
 	def setup
 		# create the entries we're going to manipulate
-		Net::LDAP::open(:host => HOST, :port => PORT, :auth => AUTH) do |ldap|
+		Net::LDAP.open(:host => HOST, :port => PORT, :auth => AUTH) do |ldap|
 			if ldap.add(:dn => "ou=sales,#{BASE}", :attributes => { :ou => "sales", :objectclass => "organizationalUnit" })
 				puts "Add failed: #{ldap.get_operation_result.message} - code: #{ldap.get_operation_result.code}"
 			end

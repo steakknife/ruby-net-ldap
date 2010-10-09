@@ -3,7 +3,7 @@ require 'base64'
 
 describe Net::LDAP::Dataset do
   
-  before { Dataset = Net::LDAP::Dataset }
+  before(:all) { Dataset = Net::LDAP::Dataset }
   
   context "when reading null LDIF" do
     subject { Dataset.read_ldif(StringIO.new) }
@@ -11,20 +11,20 @@ describe Net::LDAP::Dataset do
   end
   
   context "when reading LDIF with comments" do
-    before { @str = ["# Hello from LDIF-land", "# This is an unterminated comment"] }
-    subject { Dataset.read_ldif( StringIO.new(@str.join("\r\n")) ).comments }
-    it { should eq @str }
+    let(:str) { ["# Hello from LDIF-land", "# This is an unterminated comment"] } 
+    subject { Dataset.read_ldif( StringIO.new(str.join("\r\n")) ).comments }
+    it { should eq str }
   end
   
   context "when reading LDIF with passwords" do
-    before do 
-      @psw = "{SHA}" + Base64::encode64(Digest::SHA1.digest("goldbricks")).chomp
-      ldif_encoded = Base64::encode64(@psw).chomp
-      @ds = Dataset.read_ldif(StringIO.new("dn: Goldbrick\r\nuserPassword:: #{ldif_encoded}\r\n\r\n"))
+    let(:psw) { "{SHA}" + Base64::encode64(Digest::SHA1.digest("goldbricks")).chomp }
+    let(:ds) do
+      ldif_encoded = Base64::encode64(psw).chomp
+      Dataset.read_ldif(StringIO.new("dn: Goldbrick\r\nuserPassword:: #{ldif_encoded}\r\n\r\n"))
     end
     
-    subject { @ds["Goldbrick"][:userpassword].shift }
-    it { should eq @psw }    
+    subject { ds["Goldbrick"][:userpassword].shift }
+    it { should eq psw }    
   end
   
   context "when reading LDIF with extra spaces" do

@@ -1,27 +1,26 @@
 require 'spec_helper'
 
 describe Net::LDAP::Filter do
-  before { Filter = Net::LDAP::Filter }
+  before(:all) { Filter = Net::LDAP::Filter }
+  
   describe '#ex' do
     
-    before do
-      @filter = Filter.ex 'foo', 'bar'
-    end
+    let(:filter) { Filter.ex 'foo', 'bar' }
     
-    context "when converting filter to string" do
-      subject { @filter.to_s }   
-      it { should eq '(foo:=bar)' }
+    context "when converting filter" do
+      subject { filter }   
+      its(:to_s) { should eq '(foo:=bar)' }
     end
     
     context "when converting from string to rfc to string" do
-      subject { Filter.from_rfc2254(@filter.to_s) }
-      it { should eq @filter }
+      subject { Filter.from_rfc2254(filter.to_s) }
+      it { should eq filter }
     end
     
     context "when converting to and from BER" do
-      before { @ber = @filter.to_ber }
-      subject { Filter.parse_ber(@ber.read_ber(Net::LDAP::AsnSyntax)) }
-      it { should eq @filter }
+      let(:ber) { filter.to_ber }
+      subject { Filter.parse_ber(ber.read_ber(Net::LDAP::AsnSyntax)) }
+      it { should eq filter }
     end
     
     context "when doing various legal filter inputs" do
@@ -41,8 +40,8 @@ describe Net::LDAP::Filter do
         end
           
         context "when converting to and from BER" do
-          before { @ber = @filter.to_ber }
-          subject { Filter.parse_ber(@ber.read_ber(Net::LDAP::AsnSyntax)) }
+          let(:ber) { @filter.to_ber }
+          subject { Filter.parse_ber(ber.read_ber(Net::LDAP::AsnSyntax)) }
           it { should eq @filter }
         end
           

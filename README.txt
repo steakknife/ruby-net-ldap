@@ -43,6 +43,16 @@ sources.
 
 Simply require 'net/ldap'.
 
+== CONTRIBUTING
+[stuff]
+
+Installing OpenLDAP
+OSX
+install homebrew [url]
+install OSX dev tools if not already
+install OpenLDAP: brew install openldap
+
+
 == CREDITS
 
 Net::LDAP was originally developed by:

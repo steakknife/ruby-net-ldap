@@ -241,7 +241,7 @@ require 'net/ldap/entry'
 # and then keeps it open while it executes a user-supplied block.
 # Net::LDAP#open closes the connection on completion of the block.
 class Net::LDAP
-  VERSION = "0.3.1"
+  VERSION = "0.4.2"
 
   class LdapError < StandardError; end
 
@@ -308,6 +308,7 @@ class Net::LDAP
   DefaultPort = 389
   DefaultAuth = { :method => :anonymous }
   DefaultTreebase = "dc=com"
+  DefaultKeepalive = true
 
   StartTlsOid = "1.3.6.1.4.1.1466.20037"
 
@@ -380,6 +381,7 @@ class Net::LDAP
     @verbose = false # Make this configurable with a switch on the class.
     @auth = args[:auth] || DefaultAuth
     @base = args[:base] || DefaultTreebase
+    @keepalive = args[:keepalive] || DefaultKeepalive
     encryption args[:encryption] # may be nil
 
     if pr = @auth[:password] and pr.respond_to?(:call)
@@ -651,6 +653,15 @@ class Net::LDAP
     end
   end
 
+  # #unbind explicitly disconnects from an LDAP server
+  def unbind
+    if @open_connection
+      conn = @open_connection
+      @open_connection = nil
+      conn.close
+    end
+  end
+
   # #bind connects to an LDAP server and requests authentication based on
   # the <tt>:auth</tt> parameter passed to #open or #new. It takes no
   # parameters.
@@ -716,6 +727,11 @@ class Net::LDAP
         conn = Connection.new(:host => @host, :port => @port,
                               :encryption => @encryption)
         @result = conn.bind(auth)
+        if @keepalive
+          @open_connection.close if @open_connection
+          @open_connection = conn
+          conn = nil
+        end
       ensure
         conn.close if conn
       end

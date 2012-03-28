@@ -1,3 +1,7 @@
+=== Net::LDAP 0.4.2 / 2012-03-28
+* Minor Enhancements:
+  * Added keepaive.
+
 === Net::LDAP 0.3.1 / 2012-02-15
 * Bug Fixes:
   * Bundler should now work again
